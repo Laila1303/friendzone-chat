@@ -12,10 +12,29 @@ class ChatController extends Controller
     /**
      * Tampilkan halaman chat utama.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // Untuk tahap ini, kita cukup return view chat terlebih dahulu
-        return view('chat');
+        $currentUser = Auth::user();
+
+        // Ambil percakapan yang diikuti oleh user, diurutkan dari yang terbaru
+        $conversations = $currentUser->conversations()
+            ->with(['users', 'messages' => function ($query) {
+                $query->latest();
+            }])
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        $activeConversation = null;
+
+        // Jika ada chat_id di URL, ambil percakapan aktif tersebut
+        if ($request->has('chat_id')) {
+            $activeConversation = $currentUser->conversations()
+                ->with(['users', 'messages.user'])
+                ->where('conversations.id', $request->chat_id)
+                ->first();
+        }
+
+        return view('chat', compact('conversations', 'activeConversation'));
     }
 
     /**

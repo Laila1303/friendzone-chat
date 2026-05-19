@@ -322,36 +322,52 @@
 
             <!-- Bagian Add User via Username -->
             <div class="add-user-section">
-                <form class="add-user-form" onsubmit="event.preventDefault();">
-                    <input type="text" placeholder="Tambah username..." class="input-text">
+                <form class="add-user-form" id="add-friend-form">
+                    @csrf
+                    <input type="text" id="friend-username" placeholder="Tambah username..." class="input-text" required>
                     <button type="submit" class="btn-dark-gray">Tambah</button>
                 </form>
             </div>
 
             <!-- List Obrolan -->
             <div class="chat-list">
-                <!-- Contoh Tampilan Chat List Single (WhatsApp Style) -->
-                <div class="chat-item active">
-                    <div class="avatar">U</div>
-                    <div class="chat-info">
-                        <div class="chat-info-header">
-                            <span class="chat-name">User Contoh</span>
-                        </div>
-                        <p class="chat-last-message">Halo, ini pesan terakhir...</p>
-                    </div>
-                </div>
+                @forelse($conversations as $conv)
+                    @php
+                        // Cari nama dan avatar obrolan
+                        if ($conv->is_group) {
+                            $chatName = $conv->name ?? 'Grup Tanpa Nama';
+                            $avatarChar = '👥';
+                        } else {
+                            $contact = $conv->users->where('id', '!=', Auth::id())->first();
+                            $chatName = $contact ? $contact->name : 'Akun Dihapus';
+                            $avatarChar = $chatName ? strtoupper(substr($chatName, 0, 1)) : '?';
+                        }
 
-                <!-- Contoh Tampilan Chat List Grup -->
-                <div class="chat-item">
-                    <!-- Icon 3 orang simpel -->
-                    <div class="avatar" style="font-size: 11px;">👥</div>
-                    <div class="chat-info">
-                        <div class="chat-info-header">
-                            <span class="chat-name">Grup Belajar (3)</span>
+                        $lastMsg = $conv->messages->first();
+                        $lastMsgText = $lastMsg ? $lastMsg->message : 'Belum ada pesan';
+                        if ($lastMsg && $conv->is_group) {
+                            $lastMsgText = ($lastMsg->user->name ?? 'User') . ': ' . $lastMsgText;
+                        }
+
+                        $isActive = $activeConversation && $activeConversation->id === $conv->id;
+                    @endphp
+
+                    <a href="{{ route('dashboard', ['chat_id' => $conv->id]) }}" style="text-decoration: none; color: inherit;">
+                        <div class="chat-item {{ $isActive ? 'active' : '' }}">
+                            <div class="avatar" style="{{ $conv->is_group ? 'font-size: 11px;' : '' }}">{{ $avatarChar }}</div>
+                            <div class="chat-info">
+                                <div class="chat-info-header">
+                                    <span class="chat-name">{{ $chatName }}</span>
+                                </div>
+                                <p class="chat-last-message">{{ $lastMsgText }}</p>
+                            </div>
                         </div>
-                        <p class="chat-last-message">Pengirim: Ayo tugasnya dikumpul!</p>
+                    </a>
+                @empty
+                    <div style="padding: 20px; text-align: center; color: #718096; font-size: 13px;">
+                        Belum ada obrolan. Cari teman di atas untuk mulai chat!
                     </div>
-                </div>
+                @endforelse
             </div>
         </div>
 
@@ -398,5 +414,42 @@
 
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const addFriendForm = document.getElementById('add-friend-form');
+            if (addFriendForm) {
+                addFriendForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const usernameInput = document.getElementById('friend-username');
+                    const username = usernameInput.value.trim();
+
+                    if (!username) return;
+
+                    fetch('{{ route("conversations.add") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ username: username })
+                    })
+                    .then(response => response.json().then(data => ({ status: response.status, body: data })))
+                    .then(res => {
+                        if (res.status === 200) {
+                            alert(res.body.message);
+                            // Redirect ke chat room yang baru dibuat/ditemukan
+                            window.location.href = '{{ route("dashboard") }}?chat_id=' + res.body.data.id;
+                        } else {
+                            alert(res.body.message || 'Terjadi kesalahan.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert('Gagal menghubungi server.');
+                    });
+                });
+            }
+        });
+    </script>
 </body>
 </html>
