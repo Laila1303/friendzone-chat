@@ -15,6 +15,7 @@ Route::get('/dashboard', [ChatController::class, 'index'])
 Route::middleware('auth')->group(function () {
     Route::post('/conversations/add', [ChatController::class, 'addContact'])->name('conversations.add');
     Route::post('/messages/send', [ChatController::class, 'sendMessage'])->name('messages.send');
+    Route::post('/groups/create', [ChatController::class, 'createGroup'])->name('groups.create');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

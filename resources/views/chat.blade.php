@@ -299,6 +299,49 @@
         .logout-form {
             display: inline;
         }
+
+        /* Modal Style */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #edf2f7;
+            padding-bottom: 10px;
+        }
+
+        .modal-header h4 {
+            font-size: 16px;
+            color: #2d3748;
+        }
+
+        .close-btn {
+            font-size: 20px;
+            cursor: pointer;
+            color: #718096;
+        }
     </style>
 </head>
 <body>
@@ -313,6 +356,7 @@
                     <p>@ {{ Auth::user()->username }}</p>
                 </div>
                 <div style="display: flex; gap: 5px;">
+                    <button class="btn-dark-gray" onclick="showGroupModal()">👥 Grup</button>
                     <form method="POST" action="{{ route('logout') }}" class="logout-form">
                         @csrf
                         <button type="submit" class="btn-dark-gray">Logout</button>
@@ -495,6 +539,57 @@
                 });
             }
 
+            // 1.b. Logika Buat Grup via AJAX
+            const createGroupForm = document.getElementById('create-group-form');
+            if (createGroupForm) {
+                createGroupForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const groupNameInput = document.getElementById('group-name');
+                    const usernamesInput = document.getElementById('group-usernames');
+                    
+                    const groupName = groupNameInput.value.trim();
+                    const usernames = usernamesInput.value.trim();
+
+                    if (!groupName || !usernames) return;
+
+                    fetch('{{ route("groups.create") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            name: groupName,
+                            usernames: usernames
+                        })
+                    })
+                    .then(response => response.json().then(data => ({ status: response.status, body: data })))
+                    .then(res => {
+                        if (res.status === 200) {
+                            alert(res.body.message);
+                            hideGroupModal();
+                            window.location.href = '{{ route("dashboard") }}?chat_id=' + res.body.data.id;
+                        } else {
+                            alert(res.body.message || 'Terjadi kesalahan.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert('Gagal menghubungi server.');
+                    });
+                });
+            }
+
+            // Window Modal Show/Hide
+            window.showGroupModal = function() {
+                document.getElementById('groupModal').style.display = 'flex';
+            }
+
+            window.hideGroupModal = function() {
+                document.getElementById('groupModal').style.display = 'none';
+                if (createGroupForm) createGroupForm.reset();
+            }
+
             // 2. Logika Kirim Pesan via AJAX
             const sendMessageForm = document.getElementById('send-message-form');
             if (sendMessageForm) {
@@ -621,5 +716,30 @@
             }
         });
     </script>
+    <!-- Modal Buat Grup -->
+    <div id="groupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>Buat Grup Chat</h4>
+                <span class="close-btn" onclick="hideGroupModal()">&times;</span>
+            </div>
+            <form id="create-group-form">
+                @csrf
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 13px; color: #4a5568; display: block; margin-bottom: 4px; font-weight: 600;">Nama Grup</label>
+                    <input type="text" id="group-name" class="input-text" style="width: 100%;" placeholder="Misal: Tugas Kuliah" required>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 13px; color: #4a5568; display: block; margin-bottom: 4px; font-weight: 600;">Username Anggota</label>
+                    <input type="text" id="group-usernames" class="input-text" style="width: 100%;" placeholder="Masukkan username dipisah koma (contoh: budi, laila)" required>
+                    <small style="font-size: 11px; color: #718096; display: block; margin-top: 4px;">Pisahkan dengan tanda koma ( , )</small>
+                </div>
+                <div style="text-align: right;">
+                    <button type="button" class="btn-dark-gray" style="background-color: #718096; margin-right: 5px;" onclick="hideGroupModal()">Batal</button>
+                    <button type="submit" class="btn-dark-gray">Buat Grup</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </body>
 </html>

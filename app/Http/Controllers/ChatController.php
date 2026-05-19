@@ -142,4 +142,64 @@ class ChatController extends Controller
             ]
         ]);
     }
+
+    /**
+     * Buat percakapan grup baru.
+     */
+    public function createGroup(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'usernames' => 'required|string',
+        ]);
+
+        $currentUser = Auth::user();
+
+        // 1. Ekstrak username menjadi array dan trim spasi
+        $usernamesArray = array_map('trim', explode(',', $request->usernames));
+        $usernamesArray = array_filter($usernamesArray); // Hapus string kosong
+
+        if (empty($usernamesArray)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Silakan masukkan minimal satu username anggota.'
+            ], 400);
+        }
+
+        // 2. Cari ID user berdasarkan username-username tersebut
+        $users = User::whereIn('username', $usernamesArray)->get();
+
+        if ($users->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anggota dengan username tersebut tidak ditemukan.'
+            ], 404);
+        }
+
+        // 3. Gabungkan ID anggota kelompok dengan ID pembuat grup (current user)
+        $userIds = $users->pluck('id')->push($currentUser->id)->unique()->toArray();
+
+        // 4. Buat Conversation baru tipe Group
+        $conversation = Conversation::create([
+            'is_group' => true,
+            'name' => $request->name,
+        ]);
+
+        // 5. Hubungkan semua anggota ke grup tersebut
+        $conversation->users()->attach($userIds);
+
+        // 6. Buat pesan sistem pembuka
+        $messageText = "Grup \"{$request->name}\" dibuat oleh {$currentUser->name}.";
+        $conversation->messages()->create([
+            'user_id' => $currentUser->id,
+            'message' => $messageText,
+            'is_read' => false,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Grup berhasil dibuat!',
+            'data' => $conversation
+        ]);
+    }
 }
