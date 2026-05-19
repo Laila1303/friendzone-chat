@@ -93,4 +93,53 @@ class ChatController extends Controller
             'data' => $conversation->load('users')
         ]);
     }
+
+    /**
+     * Kirim pesan baru ke percakapan tertentu.
+     */
+    public function sendMessage(Request $request)
+    {
+        $request->validate([
+            'conversation_id' => 'required|exists:conversations,id',
+            'message' => 'required|string',
+        ]);
+
+        $currentUser = Auth::user();
+
+        // 1. Cek apakah user tergabung di percakapan tersebut
+        $conversation = $currentUser->conversations()->where('conversations.id', $request->conversation_id)->first();
+
+        if (!$conversation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki akses ke percakapan ini.'
+            ], 403);
+        }
+
+        // 2. Buat pesan baru
+        $message = $conversation->messages()->create([
+            'user_id' => $currentUser->id,
+            'message' => $request->message,
+            'is_read' => false,
+        ]);
+
+        // 3. Update 'updated_at' percakapan agar naik ke daftar teratas di sidebar
+        $conversation->touch();
+
+        // 4. Siarkan event MessageSent secara real-time
+        broadcast(new \App\Events\MessageSent($message->load('user')))->toOthers();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Pesan berhasil dikirim!',
+            'data' => [
+                'id' => $message->id,
+                'message' => $message->message,
+                'conversation_id' => $message->conversation_id,
+                'user_id' => $message->user_id,
+                'created_at' => $message->created_at->timezone('Asia/Jakarta')->format('H.i'),
+                'user_name' => $currentUser->name
+            ]
+        ]);
+    }
 }

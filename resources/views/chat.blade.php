@@ -446,12 +446,22 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Auto scroll ke bawah di container pesan
+            const currentUserId = {{ Auth::id() }};
+            const activeConvIdInput = document.getElementById('active-conv-id');
+            const activeConversationId = activeConvIdInput ? activeConvIdInput.value : null;
             const messagesContainer = document.getElementById('messages-container');
-            if (messagesContainer) {
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // Fungsi helper untuk meng-scroll chat ke paling bawah
+            function scrollToBottom() {
+                if (messagesContainer) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
             }
 
+            // Auto scroll ke bawah di awal
+            scrollToBottom();
+
+            // 1. Logika Tambah Teman via AJAX
             const addFriendForm = document.getElementById('add-friend-form');
             if (addFriendForm) {
                 addFriendForm.addEventListener('submit', function(e) {
@@ -473,7 +483,6 @@
                     .then(res => {
                         if (res.status === 200) {
                             alert(res.body.message);
-                            // Redirect ke chat room yang baru dibuat/ditemukan
                             window.location.href = '{{ route("dashboard") }}?chat_id=' + res.body.data.id;
                         } else {
                             alert(res.body.message || 'Terjadi kesalahan.');
@@ -484,6 +493,131 @@
                         alert('Gagal menghubungi server.');
                     });
                 });
+            }
+
+            // 2. Logika Kirim Pesan via AJAX
+            const sendMessageForm = document.getElementById('send-message-form');
+            if (sendMessageForm) {
+                sendMessageForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const messageInput = document.getElementById('message-text-input');
+                    const messageText = messageInput.value.trim();
+
+                    if (!messageText || !activeConversationId) return;
+
+                    fetch('{{ route("messages.send") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            conversation_id: activeConversationId,
+                            message: messageText
+                        })
+                    })
+                    .then(response => response.json().then(data => ({ status: response.status, body: data })))
+                    .then(res => {
+                        if (res.status === 200) {
+                            messageInput.value = '';
+                            
+                            // Tambah balon chat pengirim secara lokal instan
+                            appendMessageBubble(res.body.data, true);
+                            scrollToBottom();
+
+                            // Update last message di sidebar secara lokal instan
+                            updateSidebarLastMessage(activeConversationId, res.body.data.message);
+                        } else {
+                            alert(res.body.message || 'Gagal mengirim pesan.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert('Terjadi kesalahan koneksi.');
+                    });
+                });
+            }
+
+            // 3. Mendengarkan WebSocket via Laravel Echo (Real-time)
+            if (activeConversationId && window.Echo) {
+                window.Echo.private('chat.' + activeConversationId)
+                    .listen('MessageSent', (e) => {
+                        // Jika pesan datang dari orang lain, tampilkan balon pesan masuk
+                        if (parseInt(e.user_id) !== currentUserId) {
+                            appendMessageBubble({
+                                id: e.id,
+                                message: e.message,
+                                user_name: e.user_name,
+                                created_at: new Date(e.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.')
+                            }, false);
+                            scrollToBottom();
+                        }
+                        
+                        // Selalu update sidebar ketika ada pesan masuk
+                        updateSidebarLastMessage(e.conversation_id, e.message);
+                    });
+            }
+
+            // Helper untuk menambahkan balon pesan ke UI
+            function appendMessageBubble(msg, isSent) {
+                if (!messagesContainer) return;
+
+                // Cek jika div kosong/belum ada pesan
+                const emptyMsgDiv = messagesContainer.querySelector('div[style*="padding: 40px"]');
+                if (emptyMsgDiv) {
+                    emptyMsgDiv.remove();
+                }
+
+                const bubble = document.createElement('div');
+                bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}`;
+
+                let senderHeader = '';
+                // Jika ini pesan diterima dalam grup, tampilkan nama pengirim
+                const isGroup = {{ ($activeConversation && $activeConversation->is_group) ? 'true' : 'false' }};
+                if (isGroup && !isSent) {
+                    senderHeader = `<strong style="font-size: 11px; color: #4a5568; display: block; margin-bottom: 2px;">${msg.user_name}</strong>`;
+                }
+
+                const checklist = isSent ? '<span class="checklist">✓✓</span>' : '';
+
+                bubble.innerHTML = `
+                    ${senderHeader}
+                    <span style="font-size: 14px;">${escapeHtml(msg.message)}</span>
+                    <div class="message-meta">
+                        ${msg.created_at}
+                        ${checklist}
+                    </div>
+                `;
+
+                messagesContainer.appendChild(bubble);
+            }
+
+            // Helper untuk meng-update preview pesan terakhir di sidebar secara real-time
+            function updateSidebarLastMessage(conversationId, messageText) {
+                // Temukan link obrolan di sidebar
+                const chatLink = document.querySelector(`a[href*="chat_id=${conversationId}"]`);
+                if (chatLink) {
+                    const lastMsgPara = chatLink.querySelector('.chat-last-message');
+                    if (lastMsgPara) {
+                        lastMsgPara.textContent = messageText;
+                    }
+                    
+                    // Pindahkan chat item ke paling atas di sidebar (Opsional & Sangat Keren!)
+                    const chatList = document.querySelector('.chat-list');
+                    if (chatList) {
+                        chatList.prepend(chatLink);
+                    }
+                }
+            }
+
+            // Helper untuk sanitasi HTML
+            function escapeHtml(text) {
+                return text
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
             }
         });
     </script>
