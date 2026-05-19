@@ -150,9 +150,31 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-right: 12px;
             font-weight: bold;
             color: #4a5568;
+        }
+
+        /* Status Dot & Avatar Container */
+        .avatar-container {
+            position: relative;
+            display: inline-block;
+            margin-right: 12px;
+        }
+
+        .status-dot {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            background-color: #a0aec0; /* Offline (Gray) */
+            border: 2px solid #ffffff;
+            transition: background-color 0.2s ease;
+        }
+
+        .status-dot.online {
+            background-color: #48bb78; /* Online (Green) */
         }
 
         .chat-info {
@@ -397,8 +419,13 @@
                     @endphp
 
                     <a href="{{ route('dashboard', ['chat_id' => $conv->id]) }}" style="text-decoration: none; color: inherit;">
-                        <div class="chat-item {{ $isActive ? 'active' : '' }}">
-                            <div class="avatar" style="{{ $conv->is_group ? 'font-size: 11px;' : '' }}">{{ $avatarChar }}</div>
+                        <div class="chat-item {{ $isActive ? 'active' : '' }}" @if(!$conv->is_group && $contact) data-user-id="{{ $contact->id }}" @endif>
+                            <div class="avatar-container">
+                                <div class="avatar" style="{{ $conv->is_group ? 'font-size: 11px;' : '' }}">{{ $avatarChar }}</div>
+                                @if(!$conv->is_group && $contact)
+                                    <div class="status-dot user-status-{{ $contact->id }}"></div>
+                                @endif
+                            </div>
                             <div class="chat-info">
                                 <div class="chat-info-header">
                                     <span class="chat-name">{{ $chatName }}</span>
@@ -432,8 +459,18 @@
                 <!-- Header Room Chat -->
                 <div class="room-header">
                     <div class="room-title-section">
-                        <div class="avatar" style="{{ $activeConversation->is_group ? 'font-size: 11px;' : '' }}">{{ $roomAvatar }}</div>
-                        <span class="room-title">{{ $roomTitle }}</span>
+                        <div class="avatar-container">
+                            <div class="avatar" style="{{ $activeConversation->is_group ? 'font-size: 11px;' : '' }}">{{ $roomAvatar }}</div>
+                            @if(!$activeConversation->is_group && $contactUser)
+                                <div class="status-dot user-status-{{ $contactUser->id }}"></div>
+                            @endif
+                        </div>
+                        <div style="display: flex; flex-direction: column;">
+                            <span class="room-title" style="margin-bottom: 2px;">{{ $roomTitle }}</span>
+                            @if(!$activeConversation->is_group && $contactUser)
+                                <span class="room-status-text user-status-text-{{ $contactUser->id }}" style="font-size: 11px; color: #718096; text-transform: lowercase;">offline</span>
+                            @endif
+                        </div>
                     </div>
                 </div>
 
@@ -638,6 +675,45 @@
                             window.location.reload();
                         }
                     });
+            }
+
+            // 4. Tracking Status Online/Offline (Presence Channel)
+            if (window.Echo) {
+                window.Echo.join('online')
+                    .here((users) => {
+                        // Dipanggil saat pertama bergabung, memberi daftar user yang online
+                        users.forEach(user => {
+                            setUserOnlineStatus(user.id, true);
+                        });
+                    })
+                    .joining((user) => {
+                        // Dipanggil saat ada user baru masuk/online
+                        setUserOnlineStatus(user.id, true);
+                    })
+                    .leaving((user) => {
+                        // Dipanggil saat ada user keluar/offline
+                        setUserOnlineStatus(user.id, false);
+                    });
+            }
+
+            // Helper untuk mengubah status online/offline di UI
+            function setUserOnlineStatus(userId, isOnline) {
+                // Update dot di sidebar & header
+                const dots = document.querySelectorAll(`.user-status-${userId}`);
+                dots.forEach(dot => {
+                    if (isOnline) {
+                        dot.classList.add('online');
+                    } else {
+                        dot.classList.remove('online');
+                    }
+                });
+
+                // Update teks status di header
+                const statusTexts = document.querySelectorAll(`.user-status-text-${userId}`);
+                statusTexts.forEach(text => {
+                    text.textContent = isOnline ? 'online' : 'offline';
+                    text.style.color = isOnline ? '#48bb78' : '#718096';
+                });
             }
 
             // Helper untuk menambahkan balon pesan ke UI

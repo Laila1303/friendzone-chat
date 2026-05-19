@@ -9,3 +9,11 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 Broadcast::channel('chat.{conversationId}', function ($user, $conversationId) {
     return $user->conversations()->where('conversations.id', $conversationId)->exists();
 });
+
+Broadcast::channel('online', function ($user) {
+    return [
+        'id' => $user->id,
+        'name' => $user->name,
+        'username' => $user->username
+    ];
+});
