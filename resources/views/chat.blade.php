@@ -616,12 +616,8 @@
                         if (res.status === 200) {
                             messageInput.value = '';
                             
-                            // Tambah balon chat pengirim secara lokal instan
-                            appendMessageBubble(res.body.data, true);
-                            scrollToBottom();
-
-                            // Update last message di sidebar secara lokal instan
-                            updateSidebarLastMessage(activeConversationId, res.body.data.message);
+                            // Refresh halaman otomatis tiap kali ngirim pesan agar ter-update sempurna
+                            window.location.reload();
                         } else {
                             alert(res.body.message || 'Gagal mengirim pesan.');
                         }
@@ -637,19 +633,10 @@
             if (activeConversationId && window.Echo) {
                 window.Echo.private('chat.' + activeConversationId)
                     .listen('MessageSent', (e) => {
-                        // Jika pesan datang dari orang lain, tampilkan balon pesan masuk
+                        // Jika pesan datang dari orang lain, refresh halaman otomatis agar riwayat ter-update sempurna
                         if (parseInt(e.user_id) !== currentUserId) {
-                            appendMessageBubble({
-                                id: e.id,
-                                message: e.message,
-                                user_name: e.user_name,
-                                created_at: new Date(e.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.')
-                            }, false);
-                            scrollToBottom();
+                            window.location.reload();
                         }
-                        
-                        // Selalu update sidebar ketika ada pesan masuk
-                        updateSidebarLastMessage(e.conversation_id, e.message);
                     });
             }
 
