@@ -373,49 +373,85 @@
 
         <!-- Area Kanan (Chat Room) -->
         <div class="chat-room">
-            <!-- TAMPILAN AWAL (Welcome Screen) -->
-            <div class="welcome-screen">
-                <h1>selamat datang di friendzone-chat</h1>
-                <p>Silakan pilih obrolan atau tambah teman baru untuk memulai percakapan.</p>
-            </div>
-            
-            <!-- TAMPILAN AKTIF (Nanti akan dimuat secara dinamis) -->
-            <!--
-            <div class="room-header">
-                <div class="room-title-section">
-                    <div class="avatar">U</div>
-                    <span class="room-title">User Contoh</span>
-                </div>
-                <button class="btn-dark-gray">👥 Buat Grup</button>
-            </div>
+            @if($activeConversation)
+                @php
+                    if ($activeConversation->is_group) {
+                        $roomTitle = $activeConversation->name ?? 'Grup Tanpa Nama';
+                        $roomAvatar = '👥';
+                    } else {
+                        $contactUser = $activeConversation->users->where('id', '!=', Auth::id())->first();
+                        $roomTitle = $contactUser ? $contactUser->name : 'Akun Dihapus';
+                        $roomAvatar = $roomTitle ? strtoupper(substr($roomTitle, 0, 1)) : '?';
+                    }
+                @endphp
 
-            <div class="messages-container">
-                <div class="message-bubble message-received">
-                    Halo, apa kabar?
-                    <div class="message-meta">13.00</div>
-                </div>
-                <div class="message-bubble message-sent">
-                    Baik! Bagaimana denganmu?
-                    <div class="message-meta">
-                        13.01 
-                        <span class="checklist">✓✓</span>
+                <!-- Header Room Chat -->
+                <div class="room-header">
+                    <div class="room-title-section">
+                        <div class="avatar" style="{{ $activeConversation->is_group ? 'font-size: 11px;' : '' }}">{{ $roomAvatar }}</div>
+                        <span class="room-title">{{ $roomTitle }}</span>
                     </div>
                 </div>
-            </div>
 
-            <div class="chat-input-area">
-                <form class="chat-input-form">
-                    <input type="text" placeholder="Ketik pesan..." class="input-text">
-                    <button type="submit" class="btn-dark-gray">Kirim</button>
-                </form>
-            </div>
-            -->
+                <!-- Kontainer Pesan -->
+                <div class="messages-container" id="messages-container">
+                    @forelse($activeConversation->messages->sortBy('created_at') as $msg)
+                        @php
+                            $isSent = $msg->user_id === Auth::id();
+                            $msgTime = $msg->created_at->timezone('Asia/Jakarta')->format('H.i');
+                        @endphp
+
+                        <div class="message-bubble {{ $isSent ? 'message-sent' : 'message-received' }}">
+                            @if($activeConversation->is_group && !$isSent)
+                                <strong style="font-size: 11px; color: #4a5568; display: block; margin-bottom: 2px;">
+                                    {{ $msg->user->name ?? 'User' }}
+                                </strong>
+                            @endif
+                            
+                            <span style="font-size: 14px;">{{ $msg->message }}</span>
+                            
+                            <div class="message-meta">
+                                {{ $msgTime }}
+                                @if($isSent)
+                                    <span class="checklist">✓✓</span>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div style="padding: 40px; text-align: center; color: #718096; font-size: 13px;">
+                            Belum ada pesan. Kirim pesan pertama Anda di bawah!
+                        </div>
+                    @endforelse
+                </div>
+
+                <!-- Input Area Pesan -->
+                <div class="chat-input-area">
+                    <form class="chat-input-form" id="send-message-form">
+                        @csrf
+                        <input type="hidden" id="active-conv-id" value="{{ $activeConversation->id }}">
+                        <input type="text" id="message-text-input" placeholder="Ketik pesan..." class="input-text" required autocomplete="off">
+                        <button type="submit" class="btn-dark-gray">Kirim</button>
+                    </form>
+                </div>
+            @else
+                <!-- TAMPILAN AWAL (Welcome Screen) -->
+                <div class="welcome-screen">
+                    <h1>selamat datang di friendzone-chat</h1>
+                    <p>Silakan pilih obrolan atau tambah teman baru untuk memulai percakapan.</p>
+                </div>
+            @endif
         </div>
 
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Auto scroll ke bawah di container pesan
+            const messagesContainer = document.getElementById('messages-container');
+            if (messagesContainer) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
             const addFriendForm = document.getElementById('add-friend-form');
             if (addFriendForm) {
                 addFriendForm.addEventListener('submit', function(e) {
