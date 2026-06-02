@@ -33,7 +33,8 @@ class MessageSent implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('chat.' . $this->message->conversation_id),
+            // Diubah menjadi Channel biasa (Public) agar HP bisa tembus tanpa hambatan session auth
+            new Channel('chat.' . $this->message->conversation_id),
         ];
     }
 

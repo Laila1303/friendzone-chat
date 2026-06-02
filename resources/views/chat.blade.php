@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Friendzone Chat</title>
-    <!-- Vite Assets (untuk Echo/Reverb) -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
     <style>
@@ -33,7 +32,7 @@
         }
 
         body {
-            background-color: #e3ebf6; /* Latar belakang biru pucat (pale blue) */
+            background-color: #e3ebf6;
             height: 100vh;
             display: flex;
             justify-content: center;
@@ -51,13 +50,12 @@
             overflow: hidden;
         }
 
-        /* Sidebar Kiri (Chat List) */
+        /* Sidebar Kiri */
         .sidebar {
             width: 30%;
             border-right: 1px solid #dcdcdc;
             display: flex;
-            flex-direction: flex-col;
-            flex-flow: column;
+            flex-direction: column;
             background-color: #f7fafc;
         }
 
@@ -81,7 +79,7 @@
         }
 
         .btn-dark-gray {
-            background-color: #4a5568; /* Tombol abu-abu tua */
+            background-color: #4a5568;
             color: #ffffff;
             border: none;
             padding: 6px 12px;
@@ -154,7 +152,6 @@
             color: #4a5568;
         }
 
-        /* Status Dot & Avatar Container */
         .avatar-container {
             position: relative;
             display: inline-block;
@@ -168,13 +165,9 @@
             width: 11px;
             height: 11px;
             border-radius: 50%;
-            background-color: #a0aec0; /* Offline (Gray) */
+            background-color: #a0aec0; /* Default abu-abu */
             border: 2px solid #ffffff;
             transition: background-color 0.2s ease;
-        }
-
-        .status-dot.online {
-            background-color: #48bb78; /* Online (Green) */
         }
 
         .chat-info {
@@ -203,15 +196,14 @@
             max-width: 180px;
         }
 
-        /* Area Kanan (Chat Room) */
+        /* Area Kanan */
         .chat-room {
             width: 70%;
-            background-color: #ebf3f9; /* Room chat berwarna biru muda */
+            background-color: #ebf3f9;
             display: flex;
             flex-direction: column;
         }
 
-        /* Tampilan Welcome Screen (Jika belum pilih chat) */
         .welcome-screen {
             flex: 1;
             display: flex;
@@ -229,7 +221,6 @@
             margin-bottom: 8px;
         }
 
-        /* Room Chat Aktif */
         .room-header {
             padding: 15px;
             background-color: #edf2f7;
@@ -260,7 +251,7 @@
         }
 
         .message-bubble {
-            max-width: 60%;
+            max-width: 75%;
             padding: 8px 12px;
             border-radius: 8px;
             font-size: 14px;
@@ -269,7 +260,6 @@
             word-wrap: break-word;
         }
 
-        /* Pesan Masuk (Kiri) */
         .message-received {
             background-color: #ffffff;
             align-self: flex-start;
@@ -278,9 +268,8 @@
             color: #2d3748;
         }
 
-        /* Pesan Keluar (Kanan) */
         .message-sent {
-            background-color: #dcf8c6; /* Hijau muda ala WhatsApp */
+            background-color: #dcf8c6;
             align-self: flex-end;
             border-top-right-radius: 0;
             box-shadow: 0 1px 1px rgba(0,0,0,0.05);
@@ -299,9 +288,8 @@
             gap: 3px;
         }
 
-        /* Checklist terkirim ukuran kecil */
         .checklist {
-            color: #3182ce; /* Warna biru untuk tanda centang */
+            color: #3182ce;
             font-weight: bold;
             font-size: 10px;
         }
@@ -317,12 +305,10 @@
             gap: 10px;
         }
 
-        /* Form Logout */
         .logout-form {
             display: inline;
         }
 
-        /* Modal Style */
         .modal {
             display: none;
             position: fixed;
@@ -364,6 +350,52 @@
             cursor: pointer;
             color: #718096;
         }
+
+        .back-btn-mobile {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #4a5568;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                align-items: flex-start;
+            }
+
+            .app-container {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            .sidebar {
+                width: 100%;
+                display: {{ $activeConversation ? 'none' : 'flex' }};
+            }
+
+            .chat-room {
+                width: 100%;
+                display: {{ $activeConversation ? 'flex' : 'none' }};
+            }
+
+            .back-btn-mobile {
+                display: block;
+            }
+
+            .message-bubble {
+                max-width: 85%;
+            }
+
+            .welcome-screen {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
@@ -386,20 +418,17 @@
                 </div>
             </div>
 
-            <!-- Bagian Add User via Username -->
             <div class="add-user-section">
                 <form class="add-user-form" id="add-friend-form">
                     @csrf
-                    <input type="text" id="friend-username" placeholder="Tambah username..." class="input-text" required>
+                    <input type="text" id="friend-username" placeholder="Tambah email..." class="input-text" required>
                     <button type="submit" class="btn-dark-gray">Tambah</button>
                 </form>
             </div>
 
-            <!-- List Obrolan -->
             <div class="chat-list">
                 @forelse($conversations as $conv)
                     @php
-                        // Cari nama dan avatar obrolan
                         if ($conv->is_group) {
                             $chatName = $conv->name ?? 'Grup Tanpa Nama';
                             $avatarChar = '👥';
@@ -442,7 +471,7 @@
             </div>
         </div>
 
-        <!-- Area Kanan (Chat Room) -->
+        <!-- Area Kanan -->
         <div class="chat-room">
             @if($activeConversation)
                 @php
@@ -456,25 +485,25 @@
                     }
                 @endphp
 
-                <!-- Header Room Chat -->
                 <div class="room-header">
                     <div class="room-title-section">
+                        <button class="back-btn-mobile" onclick="window.location.href='{{ route('dashboard') }}'">➔</button>
+                        
                         <div class="avatar-container">
                             <div class="avatar" style="{{ $activeConversation->is_group ? 'font-size: 11px;' : '' }}">{{ $roomAvatar }}</div>
                             @if(!$activeConversation->is_group && $contactUser)
-                                <div class="status-dot user-status-{{ $contactUser->id }}"></div>
+                                <div class="status-dot room-status-dot" id="active-room-dot-{{ $contactUser->id }}"></div>
                             @endif
                         </div>
                         <div style="display: flex; flex-direction: column;">
                             <span class="room-title" style="margin-bottom: 2px;">{{ $roomTitle }}</span>
                             @if(!$activeConversation->is_group && $contactUser)
-                                <span class="room-status-text user-status-text-{{ $contactUser->id }}" style="font-size: 11px; color: #718096; text-transform: lowercase;">offline</span>
+                                <span class="room-status-text" id="active-room-text-{{ $contactUser->id }}" style="font-size: 11px; color: #718096; text-transform: lowercase;">offline</span>
                             @endif
                         </div>
                     </div>
                 </div>
 
-                <!-- Kontainer Pesan -->
                 <div class="messages-container" id="messages-container">
                     @forelse($activeConversation->messages->sortBy('created_at') as $msg)
                         @php
@@ -505,7 +534,6 @@
                     @endforelse
                 </div>
 
-                <!-- Input Area Pesan -->
                 <div class="chat-input-area">
                     <form class="chat-input-form" id="send-message-form">
                         @csrf
@@ -515,7 +543,6 @@
                     </form>
                 </div>
             @else
-                <!-- TAMPILAN AWAL (Welcome Screen) -->
                 <div class="welcome-screen">
                     <h1>selamat datang di friendzone-chat</h1>
                     <p>Silakan pilih obrolan atau tambah teman baru untuk memulai percakapan.</p>
@@ -525,31 +552,54 @@
 
     </div>
 
+    <!-- Modal Buat Grup -->
+    <div id="groupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>Buat Grup Chat</h4>
+                <span class="close-btn" onclick="hideGroupModal()">&times;</span>
+            </div>
+            <form id="create-group-form">
+                @csrf
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 13px; color: #4a5568; display: block; margin-bottom: 4px; font-weight: 600;">Nama Grup</label>
+                    <input type="text" id="group-name" class="input-text" style="width: 100%;" placeholder="Misal: Tugas Kuliah" required>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 13px; color: #4a5568; display: block; margin-bottom: 4px; font-weight: 600;">Username Anggota</label>
+                    <input type="text" id="group-usernames" class="input-text" style="width: 100%;" placeholder="Masukkan username dipisah koma (contoh: budi, laila)" required>
+                    <small style="font-size: 11px; color: #718096; display: block; margin-top: 4px;">Pisahkan dengan tanda koma ( , )</small>
+                </div>
+                <div style="text-align: right;">
+                    <button type="button" class="btn-dark-gray" style="background-color: #718096; margin-right: 5px;" onclick="hideGroupModal()">Batal</button>
+                    <button type="submit" class="btn-dark-gray">Buat Grup</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // FIX UTAMA: Definisi variabel User ID yang hilang wajib diletakkan di paling atas!
             const currentUserId = {{ Auth::id() }};
             const activeConvIdInput = document.getElementById('active-conv-id');
             const activeConversationId = activeConvIdInput ? activeConvIdInput.value : null;
             const messagesContainer = document.getElementById('messages-container');
 
-            // Fungsi helper untuk meng-scroll chat ke paling bawah
             function scrollToBottom() {
                 if (messagesContainer) {
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }
             }
-
-            // Auto scroll ke bawah di awal
             scrollToBottom();
 
-            // 1. Logika Tambah Teman via AJAX
+            // 1. Tambah Teman via AJAX
             const addFriendForm = document.getElementById('add-friend-form');
             if (addFriendForm) {
                 addFriendForm.addEventListener('submit', function(e) {
                     e.preventDefault();
                     const usernameInput = document.getElementById('friend-username');
                     const username = usernameInput.value.trim();
-
                     if (!username) return;
 
                     fetch('{{ route("conversations.add") }}', {
@@ -576,14 +626,13 @@
                 });
             }
 
-            // 1.b. Logika Buat Grup via AJAX
+            // 2. Buat Grup via AJAX
             const createGroupForm = document.getElementById('create-group-form');
             if (createGroupForm) {
                 createGroupForm.addEventListener('submit', function(e) {
                     e.preventDefault();
                     const groupNameInput = document.getElementById('group-name');
                     const usernamesInput = document.getElementById('group-usernames');
-                    
                     const groupName = groupNameInput.value.trim();
                     const usernames = usernamesInput.value.trim();
 
@@ -595,10 +644,7 @@
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': '{{ csrf_token() }}'
                         },
-                        body: JSON.stringify({
-                            name: groupName,
-                            usernames: usernames
-                        })
+                        body: JSON.stringify({ name: groupName, usernames: usernames })
                     })
                     .then(response => response.json().then(data => ({ status: response.status, body: data })))
                     .then(res => {
@@ -617,17 +663,15 @@
                 });
             }
 
-            // Window Modal Show/Hide
             window.showGroupModal = function() {
                 document.getElementById('groupModal').style.display = 'flex';
             }
-
             window.hideGroupModal = function() {
                 document.getElementById('groupModal').style.display = 'none';
                 if (createGroupForm) createGroupForm.reset();
             }
 
-            // 2. Logika Kirim Pesan via AJAX
+            // 3. Kirim Pesan via AJAX
             const sendMessageForm = document.getElementById('send-message-form');
             if (sendMessageForm) {
                 sendMessageForm.addEventListener('submit', function(e) {
@@ -643,17 +687,12 @@
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': '{{ csrf_token() }}'
                         },
-                        body: JSON.stringify({
-                            conversation_id: activeConversationId,
-                            message: messageText
-                        })
+                        body: JSON.stringify({ conversation_id: activeConversationId, message: messageText })
                     })
                     .then(response => response.json().then(data => ({ status: response.status, body: data })))
                     .then(res => {
                         if (res.status === 200) {
                             messageInput.value = '';
-                            
-                            // Refresh halaman otomatis tiap kali ngirim pesan agar ter-update sempurna
                             window.location.reload();
                         } else {
                             alert(res.body.message || 'Gagal mengirim pesan.');
@@ -666,143 +705,75 @@
                 });
             }
 
-            // 3. Mendengarkan WebSocket via Laravel Echo (Real-time)
+            // ========================================================
+            // SYSTEM POLLING STATUS ONLINE SINKRON PENUH (FIX TOTAL DATABASE)
+            // ========================================================
+            
+            function changeUserUIStatus(userId, isOnline) {
+                // Sasar bunderan abu-abu di chatlist kiri berdasarkan ID
+                const listDots = document.querySelectorAll(`.user-status-${userId}`);
+                listDots.forEach(dot => {
+                    dot.style.backgroundColor = isOnline ? '#48bb78' : '#a0aec0';
+                });
+
+                // Sasar bunderan abu-abu di roomheader kanan (atas)
+                const roomDot = document.getElementById(`active-room-dot-${userId}`);
+                if (roomDot) {
+                    roomDot.style.backgroundColor = isOnline ? '#48bb78' : '#a0aec0';
+                }
+
+                // Sasar tulisan status 'offline' di kanan bawah nama
+                const roomText = document.getElementById(`active-room-text-${userId}`);
+                if (roomText) {
+                    roomText.textContent = isOnline ? 'online' : 'offline';
+                    roomText.style.color = isOnline ? '#48bb78' : '#718096';
+                }
+            }
+
+            // 1. LAPOR DIRI: Kirim ID valid ke database agar tidak bernilai undefined
+            function reportImOnline() {
+                if (!currentUserId) return;
+                fetch(`/user/${currentUserId}/ping-online`)
+                    .catch(err => console.log("Ping error"));
+            }
+
+            // 2. CEK TEMAN: Bertanya ke server secara background
+            function checkFriendsStatus() {
+                const allChatItems = document.querySelectorAll('.chat-item[data-user-id]');
+                allChatItems.forEach(item => {
+                    const userId = item.getAttribute('data-user-id');
+                    if (!userId) return;
+                    
+                    fetch(`/user/${userId}/status-check`)
+                        .then(res => res.json())
+                        .then(data => {
+                            changeUserUIStatus(userId, data.is_online);
+                        })
+                        .catch(err => {
+                            changeUserUIStatus(userId, false);
+                        });
+                });
+            }
+
+            // Jalankan pelaporan diri dan pengecekan berkala tiap 3 detik
+            reportImOnline();
+            checkFriendsStatus();
+            setInterval(() => {
+                reportImOnline();
+                checkFriendsStatus();
+            }, 3000);
+
+            // Jalur dengerin pesan masuk real-time lewat Echo Reverb
             if (activeConversationId && window.Echo) {
-                window.Echo.private('chat.' + activeConversationId)
+                window.Echo.channel('chat.' + activeConversationId)
                     .listen('MessageSent', (e) => {
-                        // Jika pesan datang dari orang lain, refresh halaman otomatis agar riwayat ter-update sempurna
+                        changeUserUIStatus(e.user_id, true);
                         if (parseInt(e.user_id) !== currentUserId) {
                             window.location.reload();
                         }
                     });
             }
-
-            // 4. Tracking Status Online/Offline (Presence Channel)
-            if (window.Echo) {
-                window.Echo.join('online')
-                    .here((users) => {
-                        // Dipanggil saat pertama bergabung, memberi daftar user yang online
-                        users.forEach(user => {
-                            setUserOnlineStatus(user.id, true);
-                        });
-                    })
-                    .joining((user) => {
-                        // Dipanggil saat ada user baru masuk/online
-                        setUserOnlineStatus(user.id, true);
-                    })
-                    .leaving((user) => {
-                        // Dipanggil saat ada user keluar/offline
-                        setUserOnlineStatus(user.id, false);
-                    });
-            }
-
-            // Helper untuk mengubah status online/offline di UI
-            function setUserOnlineStatus(userId, isOnline) {
-                // Update dot di sidebar & header
-                const dots = document.querySelectorAll(`.user-status-${userId}`);
-                dots.forEach(dot => {
-                    if (isOnline) {
-                        dot.classList.add('online');
-                    } else {
-                        dot.classList.remove('online');
-                    }
-                });
-
-                // Update teks status di header
-                const statusTexts = document.querySelectorAll(`.user-status-text-${userId}`);
-                statusTexts.forEach(text => {
-                    text.textContent = isOnline ? 'online' : 'offline';
-                    text.style.color = isOnline ? '#48bb78' : '#718096';
-                });
-            }
-
-            // Helper untuk menambahkan balon pesan ke UI
-            function appendMessageBubble(msg, isSent) {
-                if (!messagesContainer) return;
-
-                // Cek jika div kosong/belum ada pesan
-                const emptyMsgDiv = messagesContainer.querySelector('div[style*="padding: 40px"]');
-                if (emptyMsgDiv) {
-                    emptyMsgDiv.remove();
-                }
-
-                const bubble = document.createElement('div');
-                bubble.className = `message-bubble ${isSent ? 'message-sent' : 'message-received'}`;
-
-                let senderHeader = '';
-                // Jika ini pesan diterima dalam grup, tampilkan nama pengirim
-                const isGroup = {{ ($activeConversation && $activeConversation->is_group) ? 'true' : 'false' }};
-                if (isGroup && !isSent) {
-                    senderHeader = `<strong style="font-size: 11px; color: #4a5568; display: block; margin-bottom: 2px;">${msg.user_name}</strong>`;
-                }
-
-                const checklist = isSent ? '<span class="checklist">✓✓</span>' : '';
-
-                bubble.innerHTML = `
-                    ${senderHeader}
-                    <span style="font-size: 14px;">${escapeHtml(msg.message)}</span>
-                    <div class="message-meta">
-                        ${msg.created_at}
-                        ${checklist}
-                    </div>
-                `;
-
-                messagesContainer.appendChild(bubble);
-            }
-
-            // Helper untuk meng-update preview pesan terakhir di sidebar secara real-time
-            function updateSidebarLastMessage(conversationId, messageText) {
-                // Temukan link obrolan di sidebar
-                const chatLink = document.querySelector(`a[href*="chat_id=${conversationId}"]`);
-                if (chatLink) {
-                    const lastMsgPara = chatLink.querySelector('.chat-last-message');
-                    if (lastMsgPara) {
-                        lastMsgPara.textContent = messageText;
-                    }
-                    
-                    // Pindahkan chat item ke paling atas di sidebar (Opsional & Sangat Keren!)
-                    const chatList = document.querySelector('.chat-list');
-                    if (chatList) {
-                        chatList.prepend(chatLink);
-                    }
-                }
-            }
-
-            // Helper untuk sanitasi HTML
-            function escapeHtml(text) {
-                return text
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;");
-            }
         });
     </script>
-    <!-- Modal Buat Grup -->
-    <div id="groupModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4>Buat Grup Chat</h4>
-                <span class="close-btn" onclick="hideGroupModal()">&times;</span>
-            </div>
-            <form id="create-group-form">
-                @csrf
-                <div style="margin-bottom: 12px;">
-                    <label style="font-size: 13px; color: #4a5568; display: block; margin-bottom: 4px; font-weight: 600;">Nama Grup</label>
-                    <input type="text" id="group-name" class="input-text" style="width: 100%;" placeholder="Misal: Tugas Kuliah" required>
-                </div>
-                <div style="margin-bottom: 15px;">
-                    <label style="font-size: 13px; color: #4a5568; display: block; margin-bottom: 4px; font-weight: 600;">Username Anggota</label>
-                    <input type="text" id="group-usernames" class="input-text" style="width: 100%;" placeholder="Masukkan username dipisah koma (contoh: budi, laila)" required>
-                    <small style="font-size: 11px; color: #718096; display: block; margin-top: 4px;">Pisahkan dengan tanda koma ( , )</small>
-                </div>
-                <div style="text-align: right;">
-                    <button type="button" class="btn-dark-gray" style="background-color: #718096; margin-right: 5px;" onclick="hideGroupModal()">Batal</button>
-                    <button type="submit" class="btn-dark-gray">Buat Grup</button>
-                </div>
-            </form>
-        </div>
-    </div>
 </body>
 </html>
